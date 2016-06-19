@@ -1,14 +1,19 @@
 #!/usr/bin/perl -w
 
-# Script description
-# copyright
+# Toy verilog simulator
+# written by eelster
+# supports:
+# - nothing
+
 
 BEGIN {
-    unshift(@INC,"some_path_i_need") if -e 'some_path_i_need';
+    # unshift(@INC,"some_path_i_need") if -e 'some_path_i_need';
 }
 
 use Getopt::Long;
-use Module::Pluggable require => 1, search_path => "my_script_plugins";
+use Regexp::Grammars;
+use Module::Pluggable require => 1, search_path => "toysim_plugins";
+use Data::Dumper;
 
 my $scriptname  = $0;
 $scriptname =~ s|.*/||;
@@ -21,7 +26,7 @@ my $HELP =  <<ENDHELP
     $scriptname [-debug] [options]
 
   description:
-    A script to ... 
+    Toy Verilog Simulator
 
   options:
     -debug           enable debug
@@ -44,6 +49,33 @@ foreach my $p (@plugs) {
 }
 
 # do something
+
+my $basic_verilog_parser = qr{
+   <File>
+   <rule: File>          <Module>
+   <rule: Module>        module <Modulename> \( <Params> (, <Params>)* \)\; <VariableList> <TimedSection> endmodule
+   <rule: Modulename>    <Literal>
+   <rule: Params>        <Literal>
+   <rule: VariableList>  (<Varible>)*
+   <rule: Variable>      (input|output|reg) (\[\d+:\d+\])* <Literal> ;
+   <rule: TimedSection>  always \@ begin .* end
+   <rule: Literal>       [a-zA-Z0-9_]
+   <token: ws>           (?: \s+ | //[^\n]* )*
+}xms;
+
+my $verilog_program = "";
+while (<>) {
+    my $line = $_;
+    chomp $line;
+    $line =~ s|//.*||;
+    $verilog_program .= $line;
+}
+
+if ($verilog_program =~ $basic_verilog_parser) {
+    print "sucessfully parsed\n";
+    Dumper(%/);
+}
+
 
 foreach my $p (@plugs) {
     $p->post_body($relevant_info)
